@@ -1,0 +1,10 @@
+# P2 - GARCH-VaR risk desk
+# Note: arch 8.x rewrote its public API; the desk targets arch 7.2.x
+# (arch.arch_model / arch.univariate GARCH, EGARCH, HARX). Pin accordingly.
+arch==7.2.0
+numpy
+pandas
+scipy
+yfinance
+pyarrow        # parquet cache
+pytest
