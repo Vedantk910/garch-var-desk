@@ -8,3 +8,4 @@ nlp/cache/
 .env
 .venv/
 .vercel/
+.env*
