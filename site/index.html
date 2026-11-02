@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GARCH VaR/ES Risk Desk</title>
+<meta name="description" content="A GARCH VaR and Expected Shortfall risk desk on SPY, with live backtests, a stress re-estimation that names where the model breaks, and a risk-parity overlay - one interactive page pinned to the Python model.">
+<meta name="theme-color" content="#000000">
+<script>document.documentElement.classList.add("js")</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<a class="skip" href="#tool">Skip to the tool</a>
+
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="#hero">GARCH VaR/ES Risk Desk</a>
+    <button class="menu-btn" id="menu" type="button" aria-expanded="false" aria-controls="links">Menu</button>
+    <nav id="links" aria-label="Sections">
+      <a href="#tool">The desk</a>
+      <a href="#build">Build log</a>
+      <a href="#defend">Defended</a>
+      <a href="#sources">Sources</a>
+      <a href="https://github.com/Vedantk910/garch-var-desk">Code</a>
+      <a class="pill" href="#tool">Open the desk</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<p class="status" id="status" role="status">Loading the model.</p>
+
+<!-- Hero: dark, one number carries the argument -->
+<section class="hero dark" id="hero">
+  <p class="by">Case study by Vedant Konde: a GARCH VaR/ES risk desk on SPY</p>
+  <h1>
+    <span class="lead">The tail that VaR can't price.</span>
+    <span class="big"><span id="heroEs">3.9</span>%</span>
+    <span class="tail" id="heroTail">the 99% one-day Expected Shortfall. Flip the model to a normal GARCH and it collapses to 2.4% - that mispricing is why the desk runs GARCH-t.</span>
+  </h1>
+  <a class="down" href="#tool">Open the desk</a>
+</section>
+
+<!-- The case at a glance -->
+<section class="chapter" id="brief">
+  <div class="wrap">
+    <h2 class="reveal">The desk at a glance.</h2>
+    <p class="intro">A daily risk desk on SPY, 2015-01 to 2026-10, 2,969 daily obs. Four numbers, all live.</p>
+    <dl class="brief-grid">
+      <div><dt>Model</dt><dd>GARCH(1,1) with a Student-t conditional</dd></div>
+      <div><dt>Question</dt><dd>Does the 99% VaR/ES hold up, and where does it break?</dd></div>
+      <div><dt>Yardstick</dt><dd>Backtest p-values, not point estimates</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- Interactive desk -->
+<section class="chapter alt" id="tool">
+  <div class="wrap">
+    <h2 class="reveal sm">The desk, live.</h2>
+    <p class="intro">Flip the model, pick the tail level, drag the overlay target vol. The verdict, the derivation,
+    the backtest, the Expected Shortfall, the overlay surface, the stress re-estimation and the deflated Sharpe all
+    recompute from the pinned GARCH-t path and the closed-forms in <code>garch_var/</code> - no reload, no backend.
+    The GARCH-t fits are the model's MLE; the statistics on top of them are live maths.</p>
+
+    <div class="toolgrid">
+      <form class="controls card" onsubmit="return false">
+        <h3>The desk's levers</h3>
+        <p class="note">What the client would actually turn. The pinned GARCH-t path is fixed; the model choice, the tail level and the overlay target are not.</p>
+
+        <p class="tag">Residual model - the honest choice</p>
+        <div class="ctl-grid">
+          <div class="ctl wide">
+            <label>Conditional distribution</label>
+            <div class="btns" id="modelBtns">
+              <button type="button" data-dist="t">GARCH-t</button>
+              <button type="button" data-dist="n">Normal GARCH</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctl-grid">
+          <div class="ctl">
+            <label for="inLevel">Tail level</label>
+            <select id="inLevel"></select>
+          </div>
+          <div class="ctl">
+            <label for="inTv">Overlay target vol</label>
+            <select id="inTv"></select>
+          </div>
+        </div>
+
+        <p class="tag">Deflated Sharpe - how many arms were tried</p>
+        <div class="ctl-grid">
+          <div class="ctl wide">
+            <label for="inM">Trials on the panel <i>M</i></label>
+            <div class="btns" id="mBtns">
+              <button type="button" data-m="3">3</button>
+              <button type="button" data-m="10">10</button>
+              <button type="button" data-m="50">50</button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div class="results">
+        <div class="verdict card">
+          <h3 class="tool-verdict" id="rec">—</h3>
+          <p class="verdict-line" id="recLine">Pick the model and the tail level.</p>
+          <dl class="flips">
+            <div><dt>VaR breaches</dt><dd id="dHits">—</dd></div>
+            <div><dt>ES breaches</dt><dd id="dEsHits">—</dd></div>
+            <div><dt>Joint p</dt><dd id="dMgP">—</dd></div>
+          </dl>
+          <p class="verdict-sub">GARCH-t ES level <b id="dEsT">—</b> vs normal GARCH <b id="dEsN">—</b> at your level - the gap is the heavy tail.</p>
+        </div>
+
+        <div class="card">
+          <div class="ex-head">
+            <h3>How it came - the math, live</h3>
+            <p class="note">The same five lines the desk note prints.</p>
+          </div>
+          <ol id="deriv">
+            <li>The GARCH-t fit carries persistence <code>α+β</code> = <b id="dPersist">—</b> (near-integrated, the equity signature) at AIC <b id="dAic">—</b>, under the Gaussian <b id="dAicN">—</b> - the t's tails are real.</li>
+            <li>The <b id="dLevel">—</b>% VaR bound is <code>z·h<sub>t</sub></code>. Realised breaches: <b id="dHits2">—</b> of <b id="dN">—</b> days, POF p = <b id="dKupP">—</b> - <b id="dKupVerdict">—</b>.</li>
+            <li>Expected Shortfall is the <i>mean</i> loss beyond VaR, not the quantile. Its implied breach rate <code>β</code> = <b id="dBeta">—</b> sits under the nominal level - the tail is fatter than the level says.</li>
+            <li>The joint VaR/ES Mendez-Gaona test: χ² = <b id="dMg">—</b>, df = <b id="dMgDf">—</b>, p = <b id="dMgP2">—</b> - <b id="dMgVerdict">—</b>.</li>
+            <li>So at the <b id="dModel">—</b> model and the <b id="dLevel2">—</b> level, the pair is <b id="dRec">—</b>.</li>
+          </ol>
+        </div>
+
+        <div class="card">
+          <div class="ex-head">
+            <h3>VaR backtest - three estimators, one window</h3>
+            <p class="note">At your level. Click a row to load that model. Historical is a rolling 252-day quantile.</p>
+          </div>
+          <div class="scrollx">
+            <table id="toolTable">
+              <thead><tr><th>Estimator</th><th class="n">Breaches</th><th class="n">POF p</th><th class="n">Indep p</th><th class="n">Covered</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ex-head">
+            <h3>Expected Shortfall - the Basel metric</h3>
+            <p class="note">ES is the mean loss in the tail; VaR is only the threshold. The joint test catches the middle band VaR-alone misses.</p>
+          </div>
+          <div class="scrollx">
+            <table id="esTable">
+              <thead><tr><th>At your level, <span id="esModelName">GARCH-t</span></th><th class="n">Value</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ex-head">
+            <h3>Overlay surface - report the frontier, not the point</h3>
+            <p class="note">Single-asset vol-target vs 50/50, and rolling SPY+TLT inverse-vol risk-parity at three target vols. Equity curves are pinned monthly; the metrics recompute live.</p>
+          </div>
+          <div class="chart" id="overlayChart"></div>
+          <div class="scrollx">
+            <table id="ovTable">
+              <thead><tr><th>Arm</th><th class="n">Ann ret</th><th class="n">Ann vol</th><th class="n">Sharpe</th><th class="n">Max DD</th><th class="n">Turnover/d</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p class="chart-note">The surface is monotone: higher target vol buys return but buys drawdown and costs Sharpe. At the <b id="dTv">—</b>% target the basket leveres to <b id="dLever">—</b>x - disclosed, not hidden.</p>
+        </div>
+
+        <div class="stress-grid">
+          <div class="card" data-stress="gfc_2008_09">
+            <div class="ex-head">
+              <h3>Stress 1 - GFC 2008-09</h3>
+              <p class="note">Re-fit the calm GARCH-t and iterate the forecast <i>into</i> the window. No look-ahead.</p>
+            </div>
+            <p class="stress-num" id="sgPers">—</p>
+            <p class="note">persistence global <b id="sgGlobal">—</b> to re-fit <b id="sgRefit">—</b> · worst day <b id="sgWorst">—</b> · model ES <b id="sgEs">—</b> vs realised <b id="sgReal">—</b> · joint p <b id="sgP">—</b></p>
+            <p class="note" id="sgNote"></p>
+          </div>
+          <div class="card" data-stress="crash_2020_q1">
+            <div class="ex-head">
+              <h3>Stress 2 - 2020-Q1 crash</h3>
+              <p class="note">The same re-estimation, on the liquidity crash. The model concedes where it's weak.</p>
+            </div>
+            <p class="stress-num" id="scPers">—</p>
+            <p class="note">persistence global <b id="scGlobal">—</b> to re-fit <b id="scRefit">—</b> · worst day <b id="scWorst">—</b> · model ES <b id="scEs">—</b> vs realised <b id="scReal">—</b> · joint p <b id="scP">—</b></p>
+            <p class="note" id="scNote"></p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ex-head">
+            <h3>Distributions, not point estimates</h3>
+            <p class="note">Block-bootstrap 95% CI on each arm's Sharpe, plus the deflated Sharpe - the p-value after correcting for every arm tried on this panel. Drag M to see the correction bite.</p>
+          </div>
+          <div class="infer-strip">
+            <div>
+              <h3 style="font-size:17px">15% vol-target (SPY/T-bill)</h3>
+              <div class="cibar" id="ciVt"><i></i><span class="zero"></span></div>
+              <div class="cibar-scale"><span id="ciVtLo">—</span><span id="ciVtHi">—</span></div>
+              <p class="note" style="margin-top:8px">Sharpe <b id="shVt">—</b>, 95% CI <b id="ciVtRange">—</b></p>
+            </div>
+            <div>
+              <h3 style="font-size:17px">15% risk-parity (SPY/TLT)</h3>
+              <div class="cibar" id="ciRp"><i></i><span class="zero"></span></div>
+              <div class="cibar-scale"><span id="ciRpLo">—</span><span id="ciRpHi">—</span></div>
+              <p class="note" style="margin-top:8px">Sharpe <b id="shRp">—</b>, 95% CI <b id="ciRpRange">—</b></p>
+            </div>
+          </div>
+          <div class="dsr-chips" id="dsrChips">
+            <span>Deflated Sharpe at M trials:</span>
+            <span id="dsrVt" class="dsr-p">—</span>
+            <span id="dsrRp" class="dsr-p">—</span>
+          </div>
+          <p class="chart-note">After the multiple-trials correction neither arm clears 5% - the edge is real, not proven. That is the honest line a hostile reviewer wants to see.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Build log -->
+<section class="chapter" id="build">
+  <div class="wrap narrow">
+    <h2 class="reveal sm">How I built it.</h2>
+    <p class="intro">The arc from a volatility question to a desk a client can re-run.</p>
+    <ol class="todo">
+      <li><b>Frame one risk question.</b><span>"Is the 99% one-day tail defensible, and where does it break?" reduced to two estimators (historical vs GARCH) on two statistics (VaR and Expected Shortfall), backtested on a shared out-of-sample window.</span></li>
+      <li><b>Source only reproducible numbers.</b><span>SPY daily log returns from 2015-01, winsorized at the 0.1%/99.9% quantiles, cached offline; the GFC 2008-09 and 2020-Q1 stress windows on the same SPY calendar. Every figure ships in <code>out/desk_numbers.json</code>, regenerated by one command, no network.</span></li>
+      <li><b>Model with the right distribution first.</b><span>GARCH(1,1) with a Student-t conditional beats the Gaussian on AIC (7334 vs 7540) and flags near-integrated persistence (0.994). A normal GARCH mis-prices the tails, so its 99% VaR/ES is too tight - the desk shows that, it doesn't hide it.</span></li>
+      <li><b>Prove it, not just claim it.</b><span>The Kupiec POF, the Christoffersen independence test and the Mendez-Gaona joint likelihood-ratio all run on the desk's own 552-day window; a no-look-ahead test pins the iterated stress forecast invariant to future data. 35 offline tests, seeded, one-command re-run.</span></li>
+      <li><b>Answer the hostile question.</b><span>The deflated Sharpe corrects the raw 0.68/0.56 for the three arms tried on the panel: after the haircut neither clears 5%. The stress re-fit names where the model breaks - GFC persistence already at the 1.0 boundary, ES over-shooting the shock - instead of hiding it. That admission is the elite move.</span></li>
+      <li><b>Make it feelable.</b><span><code>python run_desk.py</code> regenerates the numbers; this page re-implements the same closed-forms in JS, re-simulates the overlay from the pinned panel, and a Node harness pins the two languages to the same bits.</span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- Defended -->
+<section class="chapter alt" id="defend">
+  <div class="wrap">
+    <h2 class="reveal">Three attacks, answered with a number.</h2>
+    <p class="intro">What I'd get asked in a finance interview - and the defence that holds.</p>
+    <div class="qa">
+      <div class="card">
+        <p class="tag">Attack 1</p>
+        <h3>"A 7-of-552 breach rate is just luck on a 99% level - prove the coverage isn't a fluke."</h3>
+        <p>The Kupiec POF runs the exact null (expected 5.52 hits) and gets z = 0.63, p = 0.53 - neither over- nor under-conservative. The Christoffersen independence test confirms the hits don't cluster. And the Mendez-Gaona joint test on the VaR/ES pair checks the middle loss band too, which a VaR-only POF can't see - chi-square 1.94 on 2 df, p = 0.38. Three tests, one conclusion: the level is honest.</p>
+      </div>
+      <div class="card">
+        <p class="tag">Attack 2</p>
+        <h3>"Your Sharpe is 0.68 - but you tried three models and three overlays, so it's data-mined."</h3>
+        <p>Correct - that's exactly what the deflated Sharpe prices. It corrects the null for every arm tried on the panel (M = 3): the expected best-of-three under H0 is non-zero, so a raw Sharpe above zero is not automatically signal. After the correction the 15% vol-target p-value is 0.17 and risk-parity's is 0.34 - neither clears 5%. The edge is real, not proven. That is the honest read, and the number is re-runnable for any M.</p>
+      </div>
+      <div class="card">
+        <p class="tag">Attack 3</p>
+        <h3>"Your 2008/2020 stress window is only 44-54 days - you can't validate a 99% level on that."</p>
+        <p>And I don't claim to. A 99% POF over 44 days expects ~0.44 hits, so a non-rejection is not validation - the power note says so in the output. The stress re-fit's point is different: the calm model is already at the persistence boundary (1.0000), so a crash has no persistence left to raise, and the ES level over-shoots the realised tail loss for weeks. The desk reports the model's admission of its limits, not a false pass.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Sources -->
+<section class="chapter" id="sources">
+  <div class="wrap">
+    <h2 class="reveal sm">Sources - tagged, exactly as in <code>garch_var/</code>.</h2>
+    <p class="intro">CONFIRMED is a filed/reproducible figure. EST is our build on a public convention. <span class="uni">[unverified]</span> is a committee input - the client's to confirm.</p>
+    <div class="scrollx">
+      <table id="srcTable" class="plain">
+        <thead><tr><th>Figure</th><th class="n">Value</th><th class="n">Tag</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>SPY daily log returns</td><td class="n">2,969 obs, 2015-01 to 2026-10</td><td class="n"><span class="chip conf">CONFIRMED</span></td><td>yfinance, auto-adjusted, winsorized at 0.1%/99.9% per column (<code>data/garch_data.py</code>); cached offline</td></tr>
+          <tr><td>SPY 2006-09 GFC window</td><td class="n">2008-09-02 to 2008-10-31, 44 days</td><td class="n"><span class="chip conf">CONFIRMED</span></td><td>Stress cache (<code>data/stress_data.py</code>), same winsorization; the 2020-Q1 window reuses the main panel</td></tr>
+          <tr><td>GARCH-t fit</td><td class="n">persistence 0.994, AIC 7334</td><td class="n"><span class="chip conf">CONFIRMED</span></td><td>arch 7.x MLE, HAR mean lags [1,5,21], deterministic; the Gaussian variant (AIC 7540) is the model-choice counterfactual</td></tr>
+          <tr><td>Overlay cost · target vols · trials</td><td class="n">10 bps · 10/15/20% · M=3</td><td class="n"><span class="chip unv">[unverified]</span></td><td>Committee inputs - the 10 bps venue cost, the three target vols and the trial count the desk is priced against</td></tr>
+          <tr><td>Bootstrap CI seed · block length</td><td class="n">seed 0, 21-day blocks x 5000</td><td class="n"><span class="chip est">EST</span></td><td>Deterministic seeded re-sampling on the daily PnL, the house convention for the factor-backtest CI</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span><a href="https://github.com/Vedantk910/garch-var-desk">Vedantk910/garch-var-desk</a></span>
+    <span><a href="https://github.com/Vedantk910/garch-var-desk/blob/main/report/risk_desk_note.md">One-page risk desk note</a></span>
+    <span>Estimates for study, not investment advice. Rules as of 2026-11.</span>
+  </div>
+</footer>
+
+<script src="pins.js?v=1"></script>
+<script src="model.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>
