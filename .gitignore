@@ -7,3 +7,4 @@ nlp/cache/
 *.pt
 .env
 .venv/
+.vercel/
