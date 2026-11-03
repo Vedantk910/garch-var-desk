@@ -497,6 +497,8 @@
     }
     var m = pnlMetrics(pnl);
     m.avg_turnover = totalTurn / Math.max(n - s.start, 1);
+    // final gross exposure (|w_eq| + |w_dur|) - the disclosed leverage
+    m.final_gross = active ? (Math.abs(wEq) + Math.abs(wDur)) : 0.0;
     return { pnl: pnl, metrics: m };
   }
 
