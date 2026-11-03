@@ -111,8 +111,10 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
 .more summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--ink-3); min-height: 32px; letter-spacing: -.008em; }
 .more[open] summary { margin-bottom: 12px; }
 
-/* Verdict: the one black card in the light chapter */
-.verdict { background: #000; color: #f5f5f7; }
+/* Verdict: the one black card in the light chapter. The selector must carry
+   the .results scope: `.results .card` (line ~84) is (0,2,0) and would win
+   over a bare `.verdict` (0,1,0), washing the card back to the panel color. */
+.results .verdict { background: #000; color: #f5f5f7; }
 .tool-verdict { font-size: clamp(34px, 4.4vw, 56px); line-height: 1.06; letter-spacing: -.024em; transition: color .3s; }
 .verdict .rec-t { color: var(--ok-strong); }
 .verdict .rec-n { color: var(--warn-strong); }
