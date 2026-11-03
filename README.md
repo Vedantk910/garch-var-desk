@@ -33,8 +33,19 @@ garch_var/
   stress/     # 2008/2020 stress re-estimation (no look-ahead, iterated forecast)
 run_desk.py   # end-to-end CLI, writes out/desk_numbers.json
 report/       # risk_desk_note.md (one-pager)
+site/         # the interactive desk (static; pinned bit-for-bit to the Python desk)
+tools/        # build_site_pins.py / print_site_refs.py (regenerate site/pins.js)
 tests/        # pytest suite (35 offline tests)
 ```
+
+## Try it live
+
+The desk as an interactive page: **https://garch-var-desk.vercel.app**
+Served from `site/` on Vercel (project root `site/`, static output). Open it
+and flip the model: the 99% ES, the Kupiec / Méndez-Gaona coverage lines, the
+2008-09 and 2020-Q1 stress re-estimation, and the risk-parity surface all
+recompute from the pinned inputs in `site/pins.js` — the same numbers the
+Python desk prints, so the page and the model can't drift apart.
 
 ## Quick start
 
