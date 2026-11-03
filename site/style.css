@@ -163,7 +163,7 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
 .infer-strip .card { margin-top: 0; }
 .cibar { position: relative; height: 12px; border-radius: 6px; background: var(--bg); overflow: hidden; margin: 12px 0 6px; }
 .cibar i { position: absolute; top: 0; bottom: 0; border-radius: 6px; }
-.cibar.zero { position: absolute; width: 2px; background: var(--ink); top: -4px; bottom: -4px; z-index: 2; }
+.cibar .zero { position: absolute; width: 2px; background: var(--ink); top: -4px; bottom: -4px; z-index: 2; }
 .cibar-scale { display: flex; justify-content: space-between; font: 500 11px var(--mono); color: var(--ink-3); }
 .dsr-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .dsr-chip { font: 500 12.5px var(--font); color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 980px; padding: 6px 12px; min-height: 32px; cursor: pointer; transition: background .2s; }

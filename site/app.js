@@ -103,9 +103,14 @@
   // ----------------------------------------------------------------------
 
   function renderHero() {
-    // the hero carries the t-fit ES level mean; flipping the model changes
-    // the verdict below but not the filing's default number
-    set('heroEs', pctPlain(M.esExhibit(P, S.level, 't').esLevelMean, 1));
+    // the hero number is the t-fit ES level mean at the selected tail; the
+    // copy under it re-prices the normal-GARCH counterfactual at the same
+    // tail so the two never disagree
+    var esT = M.esExhibit(P, S.level, 't').esLevelMean;
+    var esN = M.esExhibit(P, S.level, 'n').esLevelMean;
+    set('heroEs', pctPlain(esT, 1));
+    set('heroTail', 'the ' + pctOf(S.level) + '% one-day Expected Shortfall. Flip the model to a normal GARCH and it collapses to ' +
+      pctPlain(esN, 1) + '% - that mispricing is why the desk runs GARCH-t.');
   }
 
   function renderVerdict() {
@@ -302,10 +307,15 @@
       host.querySelector('i').style.cssText =
         'position:absolute;top:0;bottom:0;border-radius:6px;left:' + pos(lo) +
         '%;width:' + Math.max(pos(hi) - pos(lo), 0.6) + '%;background:rgba(10,10,10,.16);';
-      var dot = document.createElement('i');
+      // reuse the point marker: one per bar, never accumulate on re-render
+      var dot = host.querySelector('i.point');
+      if (!dot) {
+        dot = document.createElement('i');
+        dot.className = 'point';
+        host.appendChild(dot);
+      }
       dot.style.cssText =
         'position:absolute;top:0;bottom:0;width:3px;background:#0a0a0a;z-index:1;left:' + pos(pt) + '%;';
-      host.appendChild(dot);
       host.querySelector('.zero').style.left = pos(0) + '%';
       $(hostId + 'Lo').textContent = fmt(lo, 2);
       $(hostId + 'Hi').textContent = fmt(hi, 2);
